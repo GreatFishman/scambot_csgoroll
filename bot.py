@@ -2,6 +2,7 @@ import time
 import asyncio
 import sys, os
 import multiprocessing as mp
+from xml.dom import DOMException
 from pyppeteer import launch
 
 
@@ -9,23 +10,29 @@ MAIN = 'https://www.csgoroll.com/en/withdraw/csgo/p2p'
 
 async def crawlerFunction():
     try:
+        print("...")
         browser = await launch(headless=False, 
-                                executablePath='C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe', 
-                                userDataDir="C:\\Users\\Rene-Desktop\\AppData\\Local\\Google\\Chrome\\User",
+                                executablePath='/usr/bin/google-chrome', #'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'
+                                userDataDir='home/rene/.config/google-chrome/Default',       #C:\\Users\\Rene-Desktop\\AppData\\Local\\Google\\Chrome\\User
                                 args=['--no-sandbox'])
         page = await browser.newPage()
+        await page.setViewport({'width': 1072, 'height': 768})
         await page.goto(MAIN)
         print("crawler started. gathering data")
         await asyncio.sleep(3)
         items = []
         blacklist = []
         ##setup page
+        #await page.evaluate('''() => { 
+        #    document.querySelector("input[formControlName='minValue']").focus()
+        #    }''')
+        #await page.keyboard.press('1')
+        #await page.keyboard.press('5')
         await page.evaluate('''() => { 
-            document.querySelector("input[formControlName='minValue']").focus()
+            document.querySelector("input[formControlName='maxValue']").focus()
             }''')
-        await page.keyboard.press('1')
-        await page.keyboard.press('5')
-        await asyncio.sleep(10)
+        await page.keyboard.press('3')
+        await asyncio.sleep(5)
         ##crawl for items
         while(1):
             items = await page.evaluate('''() => {
@@ -39,32 +46,36 @@ async def crawlerFunction():
                 })
                 return items
             }''')
-            print("trace")
             filteredItems = [item for item in items if item not in blacklist]
-            print("trace1")
             for item in filteredItems:
-                print("trace2")
-                clickString = 'div[textContent=\'' + item + '\']'
-                print(clickString)
-                footer = await page.querySelector('div[textContent=\'' + item + '\']')
-                print("trace")
-                await footer.click()
-                print("trace2")
-                await page.click(clickString)
-                input = input("Move " + item + " to blacklist? y/n")
+                clickString = "//*[contains(text(),'" + item + "')]"
+                footer = await page.Jx(clickString)
+
+                if(len(footer) > 0):
+                    await footer[0].click() #footer is a list, take first element
+                    await asyncio.sleep(1)
+                    withdrawButton = await page.Jx("//*[contains(text(),'Withdraw')]")
+                    print(withdrawButton)
+                    await withdrawButton[1].click()
+                    userInput = ""
+                    while(userInput != "y" and userInput != "n"):
+                        userInput = input("Move " + item + " to blacklist? [y/n]: ")
+                        if(userInput == "y"):
+                            print("blacklisting..")
+                            blacklist.append(item)
+                            #sidebarString = "//cw-selected-sidebar-items[@class='ng-star-inserted']"
+                            #selectedSidebar = await page.Jx(sidebarString)
+                            #selectedItem =  await selectedSidebar.Jx(clickString)
+                            #selectedItem[0].click()
+                        elif(userInput == "n"):
+                            continue
+                        else:
+                            print("input y/n only")
             ##end while
-    except Exception as e:
-        print(sys.exc_info()[0])
-        raise
+    except DOMException as e:
+        print(print(sys.exc_info()[0]))
 
-
-
-def crawlerThread():
-    print("starting crawler...")
-    asyncio.run(crawlerFunction())
 
 if __name__ == '__main__':
-    pool = mp.Pool(mp.cpu_count())
-    res1 = pool.apply_async(crawlerThread)
-    pool.close()
-    pool.join()
+    print("starting crawler...")
+    asyncio.run(crawlerFunction())
