@@ -3,6 +3,7 @@ import asyncio
 import sys, os
 import multiprocessing as mp
 from xml.dom import DOMException
+import fuckcaptcha
 from pyppeteer import launch
 
 
@@ -13,9 +14,10 @@ async def crawlerFunction():
         print("...")
         browser = await launch(headless=False, 
                                 executablePath='/usr/bin/google-chrome', #'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'
-                                userDataDir='home/rene/.config/google-chrome/Default',       #C:\\Users\\Rene-Desktop\\AppData\\Local\\Google\\Chrome\\User
+                                userDataDir='/home/rene/.config/google-chrome/Default',       #C:\\Users\\Rene-Desktop\\AppData\\Local\\Google\\Chrome\\User
                                 args=['--no-sandbox'])
         page = await browser.newPage()
+        await fuckcaptcha.bypass_detections(page)
         await page.setViewport({'width': 1072, 'height': 768})
         await page.goto(MAIN)
         print("crawler started. gathering data")
@@ -55,8 +57,13 @@ async def crawlerFunction():
                     await footer[0].click() #footer is a list, take first element
                     await asyncio.sleep(1)
                     withdrawButton = await page.Jx("//*[contains(text(),'Withdraw')]")
-                    print(withdrawButton)
-                    await withdrawButton[1].click()
+                    await withdrawButton[1].click() #2 elements with withdraw as text exist on the page
+                    await asyncio.sleep(5)
+                    captchaFrame = page.frames[1] #375,470
+                    await page.mouse.click(330,390)
+                    #await captchaFrame.waitForSelector('div[class="recaptcha-checkbox-border"')
+                    #await captchaFrame.click('div[class="recaptcha-checkbox-border"')
+
                     userInput = ""
                     while(userInput != "y" and userInput != "n"):
                         userInput = input("Move " + item + " to blacklist? [y/n]: ")
