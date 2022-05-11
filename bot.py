@@ -13,8 +13,10 @@ async def crawlerFunction():
     try:
         print("...")
         browser = await launch(headless=False, 
-                                executablePath='/usr/bin/google-chrome', #'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'
-                                userDataDir='/home/rene/.config/google-chrome/Default',       #C:\\Users\\Rene-Desktop\\AppData\\Local\\Google\\Chrome\\User
+                                executablePath='C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',        #'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'
+                                                                                                                    #'/usr/bin/google-chrome'
+                                userDataDir='C:\\Users\\Rene-Desktop\\AppData\\Local\\Google\\Chrome\\User',       #C:\\Users\\Rene-Desktop\\AppData\\Local\\Google\\Chrome\\User
+                                                                                                                    #'/home/rene/.config/google-chrome/Default'
                                 args=['--no-sandbox'])
         page = await browser.newPage()
         await fuckcaptcha.bypass_detections(page)
@@ -25,15 +27,15 @@ async def crawlerFunction():
         items = []
         blacklist = []
         ##setup page
-        #await page.evaluate('''() => { 
-        #    document.querySelector("input[formControlName='minValue']").focus()
-        #    }''')
-        #await page.keyboard.press('1')
-        #await page.keyboard.press('5')
         await page.evaluate('''() => { 
-            document.querySelector("input[formControlName='maxValue']").focus()
+            document.querySelector("input[formControlName='minValue']").focus()
             }''')
-        await page.keyboard.press('3')
+        await page.keyboard.press('1')
+        await page.keyboard.press('5')
+        #await page.evaluate('''() => { 
+        #    document.querySelector("input[formControlName='maxValue']").focus()
+        #    }''')
+        #await page.keyboard.press('3')
         await asyncio.sleep(5)
         ##crawl for items
         while(1):
@@ -57,10 +59,15 @@ async def crawlerFunction():
                     await footer[0].click() #footer is a list, take first element
                     await asyncio.sleep(1)
                     withdrawButton = await page.Jx("//*[contains(text(),'Withdraw')]")
-                    await withdrawButton[1].click() #2 elements with withdraw as text exist on the page
-                    await asyncio.sleep(5)
-                    captchaFrame = page.frames[1] #375,470
-                    await page.mouse.click(330,390)
+                    if(len(withdrawButton) > 1):
+                        await withdrawButton[1].click() #2 elements with withdraw as text exist on the page
+                        await asyncio.sleep(2)
+                        captchaFrame = page.frames[1] #375,470
+                        await page.mouse.click(330,390)
+                    else:
+                        print("Insufficient balance for " + item)
+                        footer = await page.Jx(clickString)
+                        await footer[0].click()
                     #await captchaFrame.waitForSelector('div[class="recaptcha-checkbox-border"')
                     #await captchaFrame.click('div[class="recaptcha-checkbox-border"')
 
